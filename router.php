@@ -17,6 +17,8 @@ $router->addRoute('movies/:id', 'DELETE', 'MovieApiController', 'deleteMovie');
 $router->addRoute('genres', 'GET', 'GenreApiController', 'getGenres');
 
 $router->addRoute('usuarios/token', 'GET', 'UserApiController', 'getToken');
+$router->addRoute('usuarios', 'POST', 'UserApiController', 'addUser');
+$router->addRoute('usuarios', 'GET', 'UserApiController', 'getUser');
 
 $router->route($_GET['resource'], $_SERVER['REQUEST_METHOD']);
 

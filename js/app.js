@@ -66,6 +66,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function signUpUser(userData) {
+    try {
+      let response = await fetch(BASE_URL_API + "usuarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+      if (!response.ok) {
+        throw new Error("Server error");
+      }
+      let user = await response.json();
+      Swal.fire({
+        icon: "success",
+        title: "Bienvenido<br>" + user.email,
+        text: "Te has registrado con éxito!",
+        text: "Inicia sesión para continuar.",
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async function getUser(email) {
+    try {
+      const response = await fetch(BASE_URL_API + "usuarios?email=" + email);
+      if (!response.ok) {
+        throw new Error("Error to get genres");
+      }
+      userData = await response.json();
+      console.log(userData);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async function getToken() {
     try {
       let response = await fetch(BASE_URL_API + "usuarios/token", {
@@ -76,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       });
       if (!response.ok) {
-        throw new Error("Error del servidor");
+        throw new Error("Server error");
       }
       let token = await response.text();
       token = token.replace(/"/g, "");
@@ -231,6 +266,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* -- overview content -- */
+
   function showOverview() {
     let movieContainer = document.createElement("div");
     movieContainer.setAttribute(
@@ -299,24 +336,20 @@ document.addEventListener("DOMContentLoaded", () => {
     aLinkGenre.innerHTML = moviesData.main_genre;
     divCardBody2.appendChild(aLinkGenre);
 
-    if (moviesData.reviews) {
-      let aLinkReview = document.createElement("a");
-      aLinkReview.setAttribute("class", "card-link review-link");
-      aLinkReview.setAttribute("href", "reviews");
-      aLinkReview.innerHTML = "opiniones";
-      divCardBody2.appendChild(aLinkReview);
-    }
+    let aLinkReview = document.createElement("a");
+    aLinkReview.setAttribute("class", "card-link review-link");
+    aLinkReview.setAttribute("href", "reviews");
+    aLinkReview.innerHTML = "opiniones";
+    divCardBody2.appendChild(aLinkReview);
 
     mainContent.innerHTML = "";
     mainContent.appendChild(movieContainer);
 
-    configOverview();
-    if (moviesData.reviews) {
-      configReviewLink();
-    }
+    configGenreLink();
+    configReviewLink();
   }
 
-  function configOverview() {
+  function configGenreLink() {
     document.querySelector(".genre-link").addEventListener("click", (event) => {
       event.preventDefault();
       getMoviesByGenre(moviesData.main_genre);
@@ -331,6 +364,8 @@ document.addEventListener("DOMContentLoaded", () => {
         showReview();
       });
   }
+
+  /* -- review content -- */
 
   function showReview() {
     let movieContainer = document.createElement("div");
@@ -372,13 +407,15 @@ document.addEventListener("DOMContentLoaded", () => {
     h5Title.setAttribute("class", "card-title");
     divCardBoby.appendChild(h5Title);
 
-    moviesData.reviews.forEach((element) => {
-      let review = document.createElement("p");
-      review.innerHTML = '"' + element.main_review + '"';
-      review.innerHTML += "<br>Puntuación = " + element.score + ".";
-      qualification += element.score;
-      divCardBoby.appendChild(review);
-    });
+    if (moviesData.reviews) {
+      moviesData.reviews.forEach((element) => {
+        let review = document.createElement("p");
+        review.innerHTML = '"' + element.main_review + '"';
+        review.innerHTML += "<br>Puntuación = " + element.score + ".";
+        qualification += element.score;
+        divCardBoby.appendChild(review);
+      });
+    }
 
     h5Title.innerHTML =
       "Opiniones (Puntuación = " +
@@ -395,19 +432,169 @@ document.addEventListener("DOMContentLoaded", () => {
     aLinkOverview.innerHTML = "resumen";
     divCardBody2.appendChild(aLinkOverview);
 
+    let aLinkAddReview = document.createElement("a");
+    aLinkAddReview.setAttribute("class", "card-link addReview-link");
+    aLinkAddReview.setAttribute("href", "addReview");
+    aLinkAddReview.innerHTML = "agregar opinión";
+    divCardBody2.appendChild(aLinkAddReview);
+
     mainContent.innerHTML = "";
     mainContent.appendChild(movieContainer);
 
-    configReview();
+    configOverviewLink();
+    configAddReviewLink();
   }
 
-  function configReview() {
+  function configOverviewLink() {
     document
       .querySelector(".overview-link")
       .addEventListener("click", (event) => {
         event.preventDefault();
         showOverview();
       });
+  }
+
+  function configAddReviewLink() {
+    document
+      .querySelector(".addReview-link")
+      .addEventListener("click", (event) => {
+        event.preventDefault();
+        showAddReview();
+      });
+  }
+
+  /* -- add review content -- */
+
+  function showAddReview() {
+    let movieContainer = document.createElement("div");
+    movieContainer.setAttribute(
+      "class",
+      "container-fluid d-flex justify-content-center flex-wrap"
+    );
+
+    let divCard = document.createElement("div");
+    divCard.setAttribute("class", "card mt-3 border-secondary");
+    divCard.setAttribute("style", "max-width: 740px;");
+    movieContainer.appendChild(divCard);
+
+    let divRow = document.createElement("div");
+    divRow.setAttribute("class", "row g-0");
+    divCard.appendChild(divRow);
+
+    let divCol = document.createElement("div");
+    divCol.setAttribute("class", "col-md-6");
+    divRow.appendChild(divCol);
+
+    let img = document.createElement("img");
+    img.setAttribute("src", moviesData.poster_path);
+    img.setAttribute("class", "img-fluid rounded-start");
+    img.setAttribute("alt", "img movie");
+    divCol.appendChild(img);
+
+    let divCol2 = document.createElement("div");
+    divCol2.setAttribute("class", "col-md-6");
+    divRow.appendChild(divCol2);
+
+    let divCardBoby = document.createElement("div");
+    divCardBoby.setAttribute("class", "card-body");
+    divCol2.appendChild(divCardBoby);
+
+    let formReview = document.createElement("div");
+    formReview.setAttribute("class", "form-floating");
+    divCardBoby.appendChild(formReview);
+
+    let textareaReview = document.createElement("textarea");
+    textareaReview.setAttribute("class", "form-control");
+    textareaReview.setAttribute("style", "height: 100px");
+    textareaReview.setAttribute("id", "floatingTextarea");
+    formReview.appendChild(textareaReview);
+
+    let labelReview = document.createElement("label");
+    labelReview.setAttribute("for", "floatingTextarea");
+    labelReview.innerHTML = "Ingrese su opinion aqui..";
+    formReview.appendChild(labelReview);
+
+    let h5Score = document.createElement("h5");
+    h5Score.setAttribute("class", "card-title mt-2");
+    h5Score.innerHTML = "Puntuación";
+    formReview.appendChild(h5Score);
+
+    let radioScore = document.createElement("div");
+    for (let i = 1; i <= 10; i++) {
+      let radio = document.createElement("div");
+      radio.setAttribute("class", "form-check form-check-inline");
+
+      let input = document.createElement("input");
+      input.setAttribute("class", "form-check-input");
+      input.setAttribute("type", "radio");
+      input.setAttribute("id", "radio" + i);
+      input.setAttribute("name", "radioScore");
+      input.setAttribute("value", i);
+      radio.appendChild(input);
+
+      let label = document.createElement("label");
+      label.setAttribute("class", "form-check-label");
+      label.setAttribute("for", "radio" + i);
+      label.innerHTML = i;
+      radio.appendChild(label);
+
+      radioScore.appendChild(radio);
+    }
+    formReview.appendChild(radioScore);
+
+    let divCardBody2 = document.createElement("div");
+    divCardBody2.setAttribute("class", "card-body");
+    divCol2.appendChild(divCardBody2);
+
+    let aLinkOverview = document.createElement("a");
+    aLinkOverview.setAttribute("class", "card-link cancel");
+    aLinkOverview.setAttribute("href", "cancel");
+    aLinkOverview.innerHTML = "cancelar";
+    divCardBody2.appendChild(aLinkOverview);
+
+    let aLinkAddReview = document.createElement("a");
+    aLinkAddReview.setAttribute("class", "card-link confirm");
+    aLinkAddReview.setAttribute("href", "add");
+    aLinkAddReview.innerHTML = "agregar";
+    divCardBody2.appendChild(aLinkAddReview);
+
+    mainContent.innerHTML = "";
+    mainContent.appendChild(movieContainer);
+
+    configCancelLink();
+    configConfirmLink();
+  }
+
+  function configCancelLink() {
+    document.querySelector(".cancel").addEventListener("click", (event) => {
+      event.preventDefault();
+      showReview();
+    });
+  }
+
+  function configConfirmLink() {
+    document.querySelector(".confirm").addEventListener("click", (event) => {
+      event.preventDefault();
+      let textareaContent = document.querySelector("#floatingTextarea");
+      let radioScoreContent = document.querySelector(
+        'input[name="radioScore"]:checked'
+      );
+      if (!textareaContent.value) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Debes ingresar una opinión, intenta nuevamente",
+        });
+      } else if (!radioScoreContent) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Debes ingresar una puntuación, intenta nuevamente",
+        });
+      } else {
+        alert(textareaContent.value + " " + radioScoreContent.value);
+      }
+    });
   }
 
   /* -- genres content -- */
@@ -504,28 +691,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function configSignIn() {
     formSignIn = document.querySelector("#formSignIn");
-    formSignIn.addEventListener("submit", loadDataSignIn);
+    formSignIn.addEventListener("submit", signIn);
   }
-
-  function loadDataSignIn(e) {
+  
+  function signIn(e) {
     e.preventDefault();
-
     let formData = new FormData(formSignIn);
     let email = formData.get("email");
-    let password = formData.get("password");
-    console.log(email + " " + password);
+    // let password = formData.get("password");
 
-    userData.push(email);
-    userData.push(password);
-
-    userData = userData.join(":");
-    console.log(userData);
-
-    userData = btoa(userData);
-    console.log("Basic " + userData);
-
-    formSignIn.reset();
-    getToken();
+    getUser(email);
   }
 
   /* -- signOut content -- */
@@ -635,30 +810,53 @@ document.addEventListener("DOMContentLoaded", () => {
     let password = formData.get("password");
     let captchaCode = formData.get("captchaCode");
 
-    if (captcha === captchaCode) {
-      console.log(email + " " + password);
-
-      userData.push(email);
-      userData.push(password);
-
-      Swal.fire({
-        icon: "success",
-        title: "WelCome",
-        text: "You have successfully registered!",
-      });
-    } else {
+    if (email == null) {
       Swal.fire({
         icon: "error",
         title: "Oops...",
-        text: "Wrong captcha, try again",
+        text: "Debes completar el email, intenta nuevamente",
       });
       showSignUp();
+    } else if (password == null) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Debes completar el password, intenta nuevamente",
+      });
+      showSignUp();
+    } else if (captcha !== captchaCode) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Captcha incorrecto, intenta nuevamente",
+      });
+      showSignUp();
+    } else {
+      userData = {
+        password: password,
+        email: email,
+      };
+      signUpUser(userData);
+      loadByDefault("signIn");
     }
   }
 
   /* -- admin content -- */
 
   // function showAdmin() {
+  // console.log(email + " " + password);
+
+  // userData.push(email);
+  // userData.push(password);
+
+  // userData = userData.join(":");
+  // console.log(userData);
+
+  // userData = btoa(userData);
+  // console.log("Basic " + userData);
+
+  // formSignIn.reset();
+  // getToken();
   //   console.log("estas en Admin");
   // }
 });
