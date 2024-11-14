@@ -48,8 +48,7 @@ INSERT INTO `genre` (`id_genre`, `main_genre`) VALUES
 (53, 'suspenso'),
 (80, 'crimen'),
 (878, 'ciencia ficción'),
-(10749, 'romance'),
-(10751, 'familia');
+(10749, 'romance');
 
 -- --------------------------------------------------------
 

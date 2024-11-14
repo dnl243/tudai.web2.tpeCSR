@@ -4,13 +4,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const BASE_URL_API = "api/";
 
   let moviesData = [];
-  let userData = [];
+  let userDataSignIn = [];
+  let userDataSS = [];
   let formSignIn;
   let formSignUp;
   let captcha;
   let mainContent = document.querySelector("#mainContent");
 
-  /* -- data logic -- */
+  /* -- DATA -- */
 
   async function getMovies() {
     try {
@@ -66,12 +67,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function signUpUser(userData) {
+  async function signUpUser(userDataSignUp) {
     try {
       let response = await fetch(BASE_URL_API + "usuarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(userDataSignUp),
       });
       if (!response.ok) {
         throw new Error("Server error");
@@ -79,34 +80,42 @@ document.addEventListener("DOMContentLoaded", () => {
       let user = await response.json();
       Swal.fire({
         icon: "success",
-        title: "Bienvenido<br>" + user.email,
-        text: "Te has registrado con éxito!",
-        text: "Inicia sesión para continuar.",
+        title: "Welcome<br>" + user.email,
+        text: "You have successfully registered! Signin to continue.",
       });
+      loadByDefault("signIn");
     } catch (e) {
       console.log(e);
     }
   }
 
-  async function getUser(email) {
+  async function checkUser(userDataSignUp) {
     try {
-      const response = await fetch(BASE_URL_API + "usuarios?email=" + email);
-      if (!response.ok) {
-        throw new Error("Error to get genres");
+      const response = await fetch(
+        BASE_URL_API + "usuarios?email=" + userDataSignUp.email
+      );
+      if (response.ok) {
+        let userDataDB = await response.json();
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: userDataDB.email + " already exist, try again",
+        });
+        showSignUp();
+      } else {
+        signUpUser(userDataSignUp);
       }
-      userData = await response.json();
-      console.log(userData);
     } catch (e) {
       console.log(e);
     }
   }
 
-  async function getToken() {
+  async function getToken(userDataBTOA) {
     try {
       let response = await fetch(BASE_URL_API + "usuarios/token", {
         method: "GET",
         headers: {
-          Authorization: "Basic " + userData,
+          Authorization: "Basic " + userDataBTOA,
           "Content-Type": "application/json",
         },
       });
@@ -117,12 +126,12 @@ document.addEventListener("DOMContentLoaded", () => {
       token = token.replace(/"/g, "");
       console.log("Bearer " + token);
 
-      // signIn(token);
+      sendToSessionSt(token);
     } catch (e) {
       console.log(e);
     }
   }
-  /* -- navigation logic -- */
+  /* -- NAVIGATION -- */
 
   function select_tab(id) {
     // remove selected class from all buttons
@@ -145,7 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
       case "signIn":
         showSignIn();
         break;
-      /************************* */
       case "signOut":
         showSignOut();
         break;
@@ -215,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
     load_content(stateId);
   });
 
-  /* -- home content -- */
+  /* -- HOME CONTENT -- */
 
   function showHome() {
     let moviesContainer = document.createElement("div");
@@ -266,7 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* -- overview content -- */
+  /* -- OVERVIEW CONTENT -- */
 
   function showOverview() {
     let movieContainer = document.createElement("div");
@@ -365,7 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
-  /* -- review content -- */
+  /* -- REVIEW CONTENT -- */
 
   function showReview() {
     let movieContainer = document.createElement("div");
@@ -407,7 +415,9 @@ document.addEventListener("DOMContentLoaded", () => {
     h5Title.setAttribute("class", "card-title");
     divCardBoby.appendChild(h5Title);
 
-    if (moviesData.reviews) {
+    if (!moviesData.reviews) {
+      h5Title.innerHTML = "Se el primero en opinar sobre esta película";
+    } else {
       moviesData.reviews.forEach((element) => {
         let review = document.createElement("p");
         review.innerHTML = '"' + element.main_review + '"';
@@ -415,12 +425,11 @@ document.addEventListener("DOMContentLoaded", () => {
         qualification += element.score;
         divCardBoby.appendChild(review);
       });
+      h5Title.innerHTML =
+        "Opiniones (Puntuación = " +
+        (qualification / moviesData.reviews.length).toFixed(1) +
+        " )";
     }
-
-    h5Title.innerHTML =
-      "Opiniones (Puntuación = " +
-      (qualification / moviesData.reviews.length).toFixed(1) +
-      " )";
 
     let divCardBody2 = document.createElement("div");
     divCardBody2.setAttribute("class", "card-body");
@@ -463,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
-  /* -- add review content -- */
+  /* -- ADD REVIEW CONTENT -- */
 
   function showAddReview() {
     let movieContainer = document.createElement("div");
@@ -597,7 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* -- genres content -- */
+  /* -- GENRES CONTENT -- */
 
   function showGenres() {
     let genresContainer = document.createElement("div");
@@ -637,7 +646,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* -- signIn content -- */
+  /* -- SIGNIN CONTENT -- */
 
   function showSignIn() {
     let signInContainer = document.createElement("div");
@@ -691,25 +700,103 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function configSignIn() {
     formSignIn = document.querySelector("#formSignIn");
-    formSignIn.addEventListener("submit", signIn);
+    formSignIn.addEventListener("submit", sendFormSignIn);
   }
-  
-  function signIn(e) {
+
+  function sendFormSignIn(e) {
     e.preventDefault();
     let formData = new FormData(formSignIn);
     let email = formData.get("email");
-    // let password = formData.get("password");
+    let password = formData.get("password");
 
-    getUser(email);
+    if (email == null) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Debes completar el email, intenta nuevamente",
+      });
+      formSignIn.reset();
+    } else if (password == null) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Debes completar el password, intenta nuevamente",
+      });
+      formSignIn.reset();
+    } else {
+      userDataSignIn = {
+        email: email,
+        password: password,
+      };
+      console.log(userDataSignIn);
+
+      let userDataBTOA = userDataSignIn.email + ":" + userDataSignIn.password;
+      console.log(userDataBTOA);
+
+      userDataBTOA = btoa(userDataBTOA);
+      console.log(userDataBTOA);
+
+      formSignIn.reset();
+
+      getToken(userDataBTOA);
+    }
   }
 
-  /* -- signOut content -- */
+  function sendToSessionSt(token) {
+    let userDataToSS = {
+      email: userDataSignIn.email,
+      token: token,
+    };
+
+    console.log(userDataToSS);
+
+    sessionStorage.setItem("userDataSS", JSON.stringify(userDataToSS));
+
+    let userDataFromSS = JSON.parse(sessionStorage.getItem("userDataSS"));
+
+    console.log(userDataFromSS);
+    console.log(userDataFromSS.email);
+    console.log(userDataFromSS.token);
+
+    userDataSS = {
+      email: userDataFromSS.email,
+    };
+
+    welcome();
+  }
+
+  function welcome() {
+    document.querySelector("#user").innerHTML = userDataSS.email;
+    loadByDefault("home");
+
+    Swal.fire({
+      icon: "success",
+      title: "Welcome<br>" + userDataSS.email,
+    });
+  }
+
+  /* -- SIGNOUT CONTENT -- */
 
   function showSignOut() {
-    console.log("estas en SignOut");
+    if (sessionStorage.getItem("userDataSS")) {
+      sessionStorage.removeItem("userDataSS");
+      sessionStorage.clear();
+
+      Swal.fire({
+        icon: "success",
+        text: "You have successfully logged out! See you later.",
+      });
+      
+      document.querySelector("#user").innerHTML = "Guest";
+    } else {
+      Swal.fire({
+        icon: "error",
+        text: "You cannot signout as a guest.",
+      });
+    }
   }
 
-  /* -- signUp content -- */
+  /* -- SIGNUP CONTENT -- */
 
   function generateCaptcha() {
     const chars =
@@ -814,30 +901,29 @@ document.addEventListener("DOMContentLoaded", () => {
       Swal.fire({
         icon: "error",
         title: "Oops...",
-        text: "Debes completar el email, intenta nuevamente",
+        text: "You must complete the email, try again",
       });
       showSignUp();
     } else if (password == null) {
       Swal.fire({
         icon: "error",
         title: "Oops...",
-        text: "Debes completar el password, intenta nuevamente",
+        text: "You must complete the password, try again",
       });
       showSignUp();
     } else if (captcha !== captchaCode) {
       Swal.fire({
         icon: "error",
         title: "Oops...",
-        text: "Captcha incorrecto, intenta nuevamente",
+        text: "Wrong captcha, try again",
       });
       showSignUp();
     } else {
-      userData = {
+      let userDataSignUp = {
         password: password,
         email: email,
       };
-      signUpUser(userData);
-      loadByDefault("signIn");
+      checkUser(userDataSignUp);
     }
   }
 

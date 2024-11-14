@@ -34,8 +34,7 @@ class MovieModel
         (53, 'suspenso'),
         (80, 'crimen'),
         (878, 'ciencia fición'),
-        (10749, 'romance'),
-        (10751, 'familia');
+        (10749, 'romance');
         
         CREATE TABLE `movie` (
         `id_movie` int(11) NOT NULL,
