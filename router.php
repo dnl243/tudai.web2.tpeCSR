@@ -1,8 +1,9 @@
 <?php
 
 require_once 'libs/router.php';
-require_once 'app/controllers/movie.api.controller.php';
 require_once 'app/controllers/genre.api.controller.php';
+require_once 'app/controllers/movie.api.controller.php';
+require_once 'app/controllers/review.api.controller.php';
 require_once 'app/controllers/user.api.controller.php';
 require_once 'app/middlewares/jwt.auth.middleware.php';
 
@@ -15,6 +16,7 @@ $router->addRoute('movies', 'POST', 'MovieApiController', 'addMovie');
 $router->addRoute('movies/:id', 'PUT', 'MovieApiController', 'updateMovie');
 $router->addRoute('movies/:id', 'DELETE', 'MovieApiController', 'deleteMovie');
 $router->addRoute('genres', 'GET', 'GenreApiController', 'getGenres');
+$router->addRoute('review', 'POST', 'ReviewApiController', 'addReview');
 
 $router->addRoute('usuarios/token', 'GET', 'UserApiController', 'getToken');
 $router->addRoute('usuarios', 'POST', 'UserApiController', 'addUser');

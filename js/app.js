@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let moviesData = [];
   let userDataSignIn = [];
   let userDataSS = [];
+  let reviewData = [];
   let formSignIn;
   let formSignUp;
   let captcha;
@@ -13,14 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* -- DATA -- */
 
-  async function getMovies() {
+  async function getMovies(callback) {
     try {
       const response = await fetch(BASE_URL_API + "movies");
       if (!response.ok) {
         throw new Error("Error to get movies");
       }
       moviesData = await response.json();
-      showHome();
+      callback();
     } catch (error) {
       console.log(error);
     }
@@ -67,7 +68,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function signUpUser(userDataSignUp) {
+  async function addReview(reviewData) {
+    try {
+      let response = await fetch(BASE_URL_API + "review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reviewData),
+      });
+      if (!response.ok) {
+        throw new Error("Server error");
+      }
+      if (response.ok) {
+        let review = await response.json();
+        getMovieById(review.id_movie);        
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async function addUser(userDataSignUp) {
     try {
       let response = await fetch(BASE_URL_API + "usuarios", {
         method: "POST",
@@ -89,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function checkUser(userDataSignUp) {
+  async function checkUserSignUp(userDataSignUp) {
     try {
       const response = await fetch(
         BASE_URL_API + "usuarios?email=" + userDataSignUp.email
@@ -103,7 +123,35 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         showSignUp();
       } else {
-        signUpUser(userDataSignUp);
+        addUser(userDataSignUp);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async function checkUserSignIn(userDataSignIn) {
+    try {
+      const response = await fetch(
+        BASE_URL_API + "usuarios?email=" + userDataSignIn.email
+      );
+      if (response.ok) {
+        let userDataDB = await response.json();
+
+        let userDataBTOA = userDataDB.email + ":" + userDataSignIn.password;
+        console.log(userDataBTOA);
+
+        userDataBTOA = btoa(userDataBTOA);
+        console.log(userDataBTOA);
+
+        getToken(userDataBTOA);
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Incorrect username or password, try again",
+        });
+        showSignIn();
       }
     } catch (e) {
       console.log(e);
@@ -119,14 +167,21 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/json",
         },
       });
-      if (!response.ok) {
-        throw new Error("Server error");
-      }
-      let token = await response.text();
-      token = token.replace(/"/g, "");
-      console.log("Bearer " + token);
+      if (response.ok) {
+        let token = await response.text();
+        token = token.replace(/"/g, "");
+        console.log("Bearer " + token);
 
-      sendToSessionSt(token);
+        sendToSessionSt(token);
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Incorrect username or password, try again",
+        });
+
+        showSignIn();
+      }
     } catch (e) {
       console.log(e);
     }
@@ -146,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function load_content(id) {
     switch (id) {
       case "home":
-        getMovies();
+        getMovies(showHome);
         break;
       case "genres":
         getGenres();
@@ -208,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // document
   //   .querySelector("#admin")
   //   .addEventListener("click", (event) => push(event));
+
   // Listen for PopStateEvent (Back or Forward buttons are clicked)
   window.addEventListener("popstate", (event) => {
     if (!event.state) {
@@ -420,7 +476,9 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       moviesData.reviews.forEach((element) => {
         let review = document.createElement("p");
-        review.innerHTML = '"' + element.main_review + '"';
+        review.innerHTML = '"';
+        review.innerText += element.main_review;
+        review.innerHTML += '"';
         review.innerHTML += "<br>Puntuación = " + element.score + ".";
         qualification += element.score;
         divCardBoby.appendChild(review);
@@ -601,7 +659,12 @@ document.addEventListener("DOMContentLoaded", () => {
           text: "Debes ingresar una puntuación, intenta nuevamente",
         });
       } else {
-        alert(textareaContent.value + " " + radioScoreContent.value);
+        reviewData = {
+          id_movie: moviesData.id_movie,
+          review: textareaContent.value,
+          score: radioScoreContent.value,
+        };
+        addReview(reviewData);
       }
     });
   }
@@ -729,16 +792,9 @@ document.addEventListener("DOMContentLoaded", () => {
         password: password,
       };
       console.log(userDataSignIn);
-
-      let userDataBTOA = userDataSignIn.email + ":" + userDataSignIn.password;
-      console.log(userDataBTOA);
-
-      userDataBTOA = btoa(userDataBTOA);
-      console.log(userDataBTOA);
+      checkUserSignIn(userDataSignIn);
 
       formSignIn.reset();
-
-      getToken(userDataBTOA);
     }
   }
 
@@ -751,6 +807,10 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log(userDataToSS);
 
     sessionStorage.setItem("userDataSS", JSON.stringify(userDataToSS));
+
+    setTimeout(() => {
+      bye();
+    }, 300000);
 
     let userDataFromSS = JSON.parse(sessionStorage.getItem("userDataSS"));
 
@@ -766,28 +826,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function welcome() {
-    document.querySelector("#user").innerHTML = userDataSS.email;
-    loadByDefault("home");
-
     Swal.fire({
       icon: "success",
       title: "Welcome<br>" + userDataSS.email,
     });
+
+    document.querySelector("#user").innerText = userDataSS.email;
+    loadByDefault("home");
+  }
+
+  function bye() {
+    sessionStorage.removeItem("userDataSS");
+    sessionStorage.clear();
+
+    Swal.fire({
+      icon: "success",
+      text: "You have successfully logged out! See you later.",
+    });
+
+    document.querySelector("#user").innerHTML = "Guest";
+    loadByDefault("home");
   }
 
   /* -- SIGNOUT CONTENT -- */
 
   function showSignOut() {
     if (sessionStorage.getItem("userDataSS")) {
-      sessionStorage.removeItem("userDataSS");
-      sessionStorage.clear();
-
-      Swal.fire({
-        icon: "success",
-        text: "You have successfully logged out! See you later.",
-      });
-      
-      document.querySelector("#user").innerHTML = "Guest";
+      bye();
     } else {
       Swal.fire({
         icon: "error",
@@ -923,7 +988,7 @@ document.addEventListener("DOMContentLoaded", () => {
         password: password,
         email: email,
       };
-      checkUser(userDataSignUp);
+      checkUserSignUp(userDataSignUp);
     }
   }
 
