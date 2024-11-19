@@ -72,7 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       let response = await fetch(BASE_URL_API + "review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: "Bearer " + userDataSS.token,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(reviewData),
       });
       if (!response.ok) {
@@ -80,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (response.ok) {
         let review = await response.json();
-        getMovieById(review.id_movie);        
+        getMovieById(review.id_movie);
       }
     } catch (e) {
       console.log(e);
@@ -139,10 +142,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let userDataDB = await response.json();
 
         let userDataBTOA = userDataDB.email + ":" + userDataSignIn.password;
-        console.log(userDataBTOA);
+        // console.log(userDataBTOA);
 
         userDataBTOA = btoa(userDataBTOA);
-        console.log(userDataBTOA);
+        // console.log(userDataBTOA);
 
         getToken(userDataBTOA);
       } else {
@@ -170,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         let token = await response.text();
         token = token.replace(/"/g, "");
-        console.log("Bearer " + token);
+        // console.log("Bearer " + token);
 
         sendToSessionSt(token);
       } else {
@@ -526,8 +529,20 @@ document.addEventListener("DOMContentLoaded", () => {
       .querySelector(".addReview-link")
       .addEventListener("click", (event) => {
         event.preventDefault();
-        showAddReview();
+        checkUserAddReview();
       });
+  }
+
+  function checkUserAddReview() {
+    if (userDataSS.length !== 0) {
+      showAddReview();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "You must log in to add a review.",
+      });
+    }
   }
 
   /* -- ADD REVIEW CONTENT -- */
@@ -791,7 +806,7 @@ document.addEventListener("DOMContentLoaded", () => {
         email: email,
         password: password,
       };
-      console.log(userDataSignIn);
+      // console.log(userDataSignIn);
       checkUserSignIn(userDataSignIn);
 
       formSignIn.reset();
@@ -804,7 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
       token: token,
     };
 
-    console.log(userDataToSS);
+    // console.log(userDataToSS);
 
     sessionStorage.setItem("userDataSS", JSON.stringify(userDataToSS));
 
@@ -814,12 +829,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let userDataFromSS = JSON.parse(sessionStorage.getItem("userDataSS"));
 
-    console.log(userDataFromSS);
-    console.log(userDataFromSS.email);
-    console.log(userDataFromSS.token);
+    // console.log(userDataFromSS);
+    // console.log(userDataFromSS.email);
+    // console.log(userDataFromSS.token);
 
     userDataSS = {
       email: userDataFromSS.email,
+      token: userDataFromSS.token,
     };
 
     welcome();
@@ -836,6 +852,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bye() {
+    userDataSS = [];
     sessionStorage.removeItem("userDataSS");
     sessionStorage.clear();
 

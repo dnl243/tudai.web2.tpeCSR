@@ -4,18 +4,25 @@ require_once 'app/models/review.model.php';
 require_once 'app/models/movie.model.php';
 require_once 'app/views/json.view.php';
 
-class ReviewApiController{
+class ReviewApiController
+{
   private $model;
   private $modelMovie;
   private $view;
 
-  public function __construct(){
+  public function __construct()
+  {
     $this->model = new ReviewModel();
     $this->modelMovie = new MovieModel();
     $this->view = new JSONView();
   }
 
-  public function addReview($req, $res){
+  public function addReview($req, $res)
+  {
+    if (!$res->user) {
+      return $this->view->response("Authorization error: Invalid token.", 401);
+    }
+
     if (!isset($req->body->id_movie) || empty($req->body->id_movie)) {
       return $this->view->response("Data Is Missing (id_movie)", 400);
     }
